@@ -175,7 +175,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     // Initialize first plan
-    window.buildPlanUI("Phase 1");
+    //window.buildPlanUI("Phase 1");
 
     // Modal UI logic
     // Modal UI logic - Upgraded to reset the modal state
@@ -477,8 +477,6 @@ if (Object.keys(window.projectSequenceData).length === 0) {
     // API Connection and Data Loading
     try {
         console.log("Attempting to connect to Trimble Workspace API...");
-        
-        // Increased timeout from 3000 to 10000 (10 seconds) to prevent premature offline mode
         window.tcAPI = await WorkspaceAPI.connect(window.parent, () => {}, 10000);
         
         const projectInfo = await window.tcAPI.project.getProject();
@@ -487,6 +485,10 @@ if (Object.keys(window.projectSequenceData).length === 0) {
         
         // Actually load data from Firebase
         const cloudData = await loadFromCloud(window.trimbleProjectId);
+        
+        const planContainer = document.getElementById('plan-container');
+        if (planContainer) planContainer.innerHTML = ''; // WIPE THE SCREEN CLEAN
+        
         if (cloudData && Object.keys(cloudData).length > 0) {
             window.projectSequenceData = cloudData;
             for (const planName in cloudData) {
@@ -494,11 +496,16 @@ if (Object.keys(window.projectSequenceData).length === 0) {
             }
             window.showToast("Cloud sequence loaded successfully!", "success");
         } else {
+            // ONLY draw a blank Phase 1 if the cloud database is completely empty
             window.buildPlanUI("Phase 1");
         }
     } catch (e) {
         console.error("API Connection Failed! Running offline for UI testing. Error:", e);
         window.trimbleProjectId = "offline-test-project";
+        
+        const planContainer = document.getElementById('plan-container');
+        if (planContainer) planContainer.innerHTML = '';
+        
         window.buildPlanUI("Phase 1");
     }
 });
