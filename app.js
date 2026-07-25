@@ -161,6 +161,34 @@ window.renderAssemblyList = (container, plan, category, items) => {
         `;
     }).join('');
 };
+// --- GLOBAL TOAST NOTIFICATION ---
+window.showToast = (message, type = 'info') => {
+    // 1. Check if the container exists; if not, create it
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        document.body.appendChild(container);
+    }
+
+    // 2. Create the toast element
+    const toast = document.createElement('div');
+    toast.className = `custom-toast ${type}`;
+    toast.innerText = message;
+
+    // 3. Add it to the screen
+    container.appendChild(toast);
+
+    // 4. Trigger the slide-in animation
+    setTimeout(() => toast.classList.add('show'), 10);
+
+    // 5. Automatically remove it after 3 seconds
+    setTimeout(() => {
+        toast.classList.remove('show');
+        // Wait for the fade-out animation to finish before deleting the element
+        setTimeout(() => toast.remove(), 300); 
+    }, 3000);
+};
 
     // Report Functionality
     const btnReport = document.getElementById('btn-report');
@@ -323,7 +351,7 @@ if (btnImport) {
                     }
 
                 } catch (error) {
-                    alert("Failed to import data. Please ensure it is a valid sequence JSON file.");
+                    window.showToast("Failed to import data. Please ensure it is a valid sequence JSON file.", "error");
                     console.error("IMPORT CRASHED AT:", error);
                 }
             };
@@ -339,7 +367,11 @@ if (btnImport) {
     const btnExport = document.getElementById('btn-export');
     if(btnExport) {
         btnExport.addEventListener('click', () => {
-            if (Object.keys(window.projectSequenceData).length === 0) return alert("No sequence data found!");
+            // NEW WAY:
+if (Object.keys(window.projectSequenceData).length === 0) {
+    window.showToast("No sequence data found!", "error");
+    return;
+}
             const dataStr = JSON.stringify(window.projectSequenceData, null, 2);
             const blob = new Blob([dataStr], { type: "application/json" });
             const url = URL.createObjectURL(blob);
@@ -378,10 +410,20 @@ window.toggleMenu = (event, btn) => {
 window.handleMenuAction = async (action, element, planName, categoryName) => {
     
     // 1. ASSIGNMENT LOGIC
+    // 1. ASSIGNMENT LOGIC
     if (action === 'Assign Multiple Assemblies' || action === 'Assign Picked Assemblies In Order') {
-        if (!window.tcAPI) return alert("API not connected.");
+        
+        if (!window.tcAPI) {
+            window.showToast("API not connected.", "error");
+            return;
+        }
+        
         const selection = await window.tcAPI.viewer.getSelection();
-        if (!selection || selection.length === 0) return alert("Please select assemblies in the 3D viewer first!");
+        
+        if (!selection || selection.length === 0) {
+            window.showToast("Please select assemblies in the 3D viewer first!", "info");
+            return;
+        }
 
         let currentItems = window.projectSequenceData[planName][categoryName] || [];
         

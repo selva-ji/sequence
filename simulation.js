@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 3. PLAYBACK CONTROLS ---
     function playSimulation() {
         prepareSimulationData();
-        if (sortedSequenceList.length === 0) return alert("No sequence data found.");
+        if (sortedSequenceList.length === 0) return window.showToast("No sequence data found.");
 
         if (currentIndex >= sortedSequenceList.length - 1) {
             currentIndex = 0; // Restart if at the end
