@@ -1,8 +1,15 @@
 import * as WorkspaceAPI from 'https://cdn.jsdelivr.net/npm/trimble-connect-workspace-api@latest/+esm';
 import { saveToCloud, loadFromCloud } from './firebase-sync.js';
-
 // Global memory store
 window.projectSequenceData = {};
+window.trimbleProjectId = null; // Will be set when API connects
+
+// Global sync function to easily trigger saves
+window.syncCloud = () => {
+    if (window.trimbleProjectId) {
+        saveToCloud(window.trimbleProjectId, window.projectSequenceData);
+    }
+};
 
 document.addEventListener('DOMContentLoaded', async () => {
     const btnCreate = document.getElementById('btn-create');
@@ -125,6 +132,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         modal.style.display = 'none';
         inputPlanName.value = '';
         window.buildPlanUI(planName);
+        window.syncCloud();
     });
 
     // --- GLOBAL RENDER FUNCTION ---
@@ -350,6 +358,8 @@ if (btnImport) {
                             }
                         }
                     }
+                    window.syncCloud(); // ADD THIS HERE TO SAVE IMPORTED DATA TO CLOUD
+                    window.showToast("Import Successful!", "success");
 
                 } catch (error) {
                     window.showToast("Failed to import data. Please ensure it is a valid sequence JSON file.", "error");
@@ -389,8 +399,14 @@ if (Object.keys(window.projectSequenceData).length === 0) {
     // API Connection
     try {
         window.tcAPI = await WorkspaceAPI.connect(window.parent, () => {}, 3000);
+        
+        // Grab the active Project ID from Trimble Connect
+        const projectInfo = await window.tcAPI.project.getProject();
+        window.trimbleProjectId = projectInfo.id;
+        
     } catch (e) {
         console.error("Running offline for UI testing.");
+        window.trimbleProjectId = "offline-test-project"; // Prevents crashes if testing locally
     }
 });
 
@@ -622,6 +638,7 @@ window.handleMenuAction = async (action, element, planName, categoryName) => {
     }
     
     element.closest('.dropdown-menu').classList.remove('show');
+    window.syncCloud();
 };
 
 // Handle clicks outside dropdowns
@@ -739,6 +756,8 @@ window.handleDrop = (e) => {
             const wrapper = target.closest('.summary-wrapper');
             const listContainer = wrapper.querySelector('.assembly-list');
             window.renderAssemblyList(listContainer, targetPlan, targetCategory, currentItems);
+
+            window.syncCloud();
         }
     }
     
@@ -880,6 +899,8 @@ document.getElementById('popup-update-btn').onclick = () => {
     // Instantly re-render the list to show the new dates
     const listContainer = allRows[0].parentElement;
     window.renderAssemblyList(listContainer, plan, category, items);
+
+    window.syncCloud();
 };
 
 // 5. Execute the Delete Action
@@ -914,6 +935,8 @@ document.getElementById('popup-delete-btn').onclick = () => {
     // Update the title count (e.g., Column (4) -> Column (3))
     const titleSpan = wrapper.querySelector('.category-title');
     titleSpan.innerHTML = `<span class="cat-icon" style="font-family: monospace; font-size: 14px;">v</span> ☰ ${category} (${window.projectSequenceData[plan][category].length})`;
+
+    window.syncCloud();
 };
 
 window.moveItems = (targetPlan, targetCategory) => {
@@ -959,6 +982,8 @@ window.moveItems = (targetPlan, targetCategory) => {
     renderAndUpdateCount(targetPlan, targetCategory);
     
     popup.style.display = 'none';
+
+    window.syncCloud();
 };
 
 // Hook up the Move buttons
