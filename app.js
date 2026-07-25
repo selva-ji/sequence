@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const planContainer = document.getElementById('plan-container');
 
     
-    window.createSubPlanHTML = function(planName, catName, catColor, txtColor, items = []) {
+    /*window.createSubPlanHTML = function(planName, catName, catColor, txtColor, items = []) {
         let itemsHTML = items.map(item => `
             <div class="assembly-row" onclick="highlightObject('${item.modelId}', ${item.runtimeId})" style="cursor: pointer; padding: 6px 10px; border-bottom: 1px solid #eee; font-size: 12px; color: #444; display: flex; align-items: center;">
                 📄 ${item.name} (${item.weight} kg)
@@ -49,66 +49,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             </div>
         `;
-    };
-    // 1. UI Builder Function
-    /*window.buildPlanUI = function(planName) {
-        window.projectSequenceData[planName] = {};
-
-        const categories = [
-            { name: "Column", color: "#92d050" },
-            { name: "Beam", color: "#2f5597", textColor: "#fff" },
-            { name: "Roof Brace", color: "#ffc000" },
-            { name: "Girt", color: "#ff00ff" },
-            { name: "Purlin", color: "#a6caf0", textColor: "#000" }
-        ];
-
-        // Upgrade: Merge standard categories with ANY custom ones found in the cloud data
-        let finalCategories = [...standardCategories];
-        
-        if (existingData) {
-            const existingKeys = Object.keys(existingData);
-            existingKeys.forEach(key => {
-                // If the cloud data has a category we don't recognize, add it to the UI dynamically
-                if (!finalCategories.find(c => c.name === key)) {
-                    finalCategories.push({ name: key, color: "#888888", textColor: "#fff" });
-                }
-            });
-        }
-
-        let subPlansHTML = '';
-        categories.forEach(cat => {
-            const txtColor = cat.textColor || '#000';
-            window.projectSequenceData[planName][cat.name] = [];
-            subPlansHTML += window.createSubPlanHTML(planName, cat.name, cat.color, txtColor, []);
-        });
-
-        const newPlanHTML = `
-            <div class="plan-details" data-plan="${planName}" style="margin-bottom: 10px; background: #fff; border-radius: 4px; border: 1px solid #ddd; overflow: visible;">
-                
-                <div class="summary-wrapper" style="position: relative; padding: 10px 15px; background-color: #efefef; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; color: #333;">
-                    <div style="display: flex; align-items: center; gap: 12px; cursor: pointer; flex: 1;" onclick="togglePlanCollapse(this)">
-                        <span class="collapse-icon" style="font-family: monospace; font-size: 14px; color: #666;">v</span>
-                        <span class="summary-content" style="font-weight: 500;">☰ ${planName}</span>
-                    </div>
-                    
-                    <button class="kebab-btn" style="color: #666; font-size: 18px; opacity: 0.7; border: none; background: transparent; cursor: pointer;" onclick="toggleMenu(event, this)">⋮</button>
-                    
-                    <div class="dropdown-menu">
-                        <div class="dropdown-item" onclick="handleMenuAction('Add Custom Category', this, '${planName}')">✨ Add Custom Category</div>
-                        <div class="dropdown-item" onclick="handleMenuAction('Edit', this, '${planName}')">✏️ Edit</div>
-                        <div class="dropdown-item danger" onclick="handleMenuAction('Delete Plan', this, '${planName}')">🗑️ Delete</div>
-                    </div>
+    };*/
+    window.createSubPlanHTML = function(planName, catName, catColor, txtColor, itemCount = 0) {
+        return `
+            <div class="summary-wrapper" style="margin-bottom: 6px;" data-category="${catName}">
+                <div class="sub-plan-row" onclick="toggleCategoryCollapse(this)" style="background-color: ${catColor}; color: ${txtColor}; display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-radius: 4px; cursor: pointer;">
+                    <span class="category-title"><span class="cat-icon" style="font-family: monospace; font-size: 14px;">></span> ☰ ${catName} (${itemCount})</span>
+                    <button class="kebab-btn" style="color: inherit; opacity: 0.7; background: transparent; border: none; cursor: pointer; font-size: 18px;" onclick="toggleMenu(event, this)">⋮</button>
                 </div>
-
-                <div class="sub-plan-list" style="padding: 10px; background-color: #ffffff; display: flex; flex-direction: column; gap: 8px;">
-                    ${subPlansHTML}
+                <div class="dropdown-menu">
+                    <div class="dropdown-item" onclick="handleMenuAction('Assign Multiple Assemblies', this, '${planName}', '${catName}')">➕ Assign Multiple Assemblies</div>
+                    <div class="dropdown-item" onclick="handleMenuAction('Assign Picked Assemblies In Order', this, '${planName}', '${catName}')">➕ Assign Picked Assemblies In Order</div>
+                    <div class="dropdown-item" onclick="handleMenuAction('Edit', this, '${planName}', '${catName}')">✏️ Edit</div>
+                    <div class="dropdown-item danger" onclick="handleMenuAction('Delete Sub Plan', this, '${planName}', '${catName}')">🗑️ Delete</div>
+                </div>
+                <div class="assembly-list" style="display: none; background: #fafafa; padding-left: 15px; border-left: 3px solid ${catColor}; margin-left: 10px; border-bottom-left-radius: 4px;">
+                    <!-- Rows will be injected here automatically -->
                 </div>
             </div>
         `;
-        
-        planContainer.insertAdjacentHTML('beforeend', newPlanHTML);
-    };*/
-    window.buildPlanUI = function(planName, existingData = null) {
+    };
+    
+    /*window.buildPlanUI = function(planName, existingData = null) {
         if (!existingData) {
             window.projectSequenceData[planName] = {};
         }
@@ -172,12 +134,82 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
         
         if (planContainer) planContainer.insertAdjacentHTML('beforeend', newPlanHTML);
+    };*/
+
+    window.buildPlanUI = function(planName, existingData = null) {
+        if (!existingData) {
+            window.projectSequenceData[planName] = {};
+        }
+
+        const standardCategories = [
+            { name: "Column", color: "#92d050" },
+            { name: "Beam", color: "#2f5597", textColor: "#fff" },
+            { name: "Roof Brace", color: "#ffc000" },
+            { name: "Girt", color: "#ff00ff" },
+            { name: "Purlin", color: "#a6caf0", textColor: "#000" }
+        ];
+
+        let finalCategories = [...standardCategories];
+        
+        if (existingData) {
+            const existingKeys = Object.keys(existingData);
+            existingKeys.forEach(key => {
+                if (!finalCategories.find(c => c.name === key)) {
+                    finalCategories.push({ name: key, color: "#888888", textColor: "#fff" });
+                }
+            });
+        }
+
+        let subPlansHTML = '';
+        finalCategories.forEach(cat => {
+            const txtColor = cat.textColor || '#000';
+            const items = existingData && existingData[cat.name] ? existingData[cat.name] : [];
+            
+            if (!window.projectSequenceData[planName][cat.name]) {
+                window.projectSequenceData[planName][cat.name] = items;
+            }
+            
+            // Just pass the total count to create the shell
+            subPlansHTML += window.createSubPlanHTML(planName, cat.name, cat.color, txtColor, items.length);
+        });
+
+        const newPlanHTML = `
+            <div class="plan-details" data-plan="${planName}" style="margin-bottom: 10px; background: #fff; border-radius: 4px; border: 1px solid #ddd; overflow: visible;">
+                <div class="summary-wrapper" style="position: relative; padding: 10px 15px; background-color: #efefef; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; color: #333;">
+                    <div style="display: flex; align-items: center; gap: 12px; cursor: pointer; flex: 1;" onclick="togglePlanCollapse(this)">
+                        <span class="collapse-icon" style="font-family: monospace; font-size: 14px; color: #666;">v</span>
+                        <span class="summary-content" style="font-weight: 500;">☰ ${planName}</span>
+                    </div>
+                    <button class="kebab-btn" style="color: #666; font-size: 18px; opacity: 0.7; border: none; background: transparent; cursor: pointer;" onclick="toggleMenu(event, this)">⋮</button>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-item" onclick="handleMenuAction('Add Custom Category', this, '${planName}')">✨ Add Custom Category</div>
+                        <div class="dropdown-item" onclick="handleMenuAction('Edit', this, '${planName}')">✏️ Edit</div>
+                        <div class="dropdown-item danger" onclick="handleMenuAction('Delete Plan', this, '${planName}')">🗑️ Delete</div>
+                    </div>
+                </div>
+                <div class="sub-plan-list" style="padding: 10px; background-color: #ffffff; display: flex; flex-direction: column; gap: 8px;">
+                    ${subPlansHTML}
+                </div>
+            </div>
+        `;
+        
+        if (planContainer) {
+            // 1. Draw the empty categories on the screen
+            planContainer.insertAdjacentHTML('beforeend', newPlanHTML);
+            
+            // 2. IMMEDIATELY fill them using the global drag-and-drop renderer!
+            finalCategories.forEach(cat => {
+                const items = window.projectSequenceData[planName][cat.name];
+                if (items && items.length > 0) {
+                    const wrapper = planContainer.querySelector(`.plan-details[data-plan="${planName}"] .summary-wrapper[data-category="${cat.name}"]`);
+                    if (wrapper) {
+                        const listContainer = wrapper.querySelector('.assembly-list');
+                        window.renderAssemblyList(listContainer, planName, cat.name, items);
+                    }
+                }
+            });
+        }
     };
-
-    // Initialize first plan
-    //window.buildPlanUI("Phase 1");
-
-    // Modal UI logic
     // Modal UI logic - Upgraded to reset the modal state
     btnCreate.addEventListener('click', () => { 
         const modalContent = modal.querySelector('.modal-content');
