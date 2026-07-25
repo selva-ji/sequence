@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
     };
     // 1. UI Builder Function
-    window.buildPlanUI = function(planName) {
+    /*window.buildPlanUI = function(planName) {
         window.projectSequenceData[planName] = {};
 
         const categories = [
@@ -61,6 +61,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             { name: "Girt", color: "#ff00ff" },
             { name: "Purlin", color: "#a6caf0", textColor: "#000" }
         ];
+
+        // Upgrade: Merge standard categories with ANY custom ones found in the cloud data
+        let finalCategories = [...standardCategories];
+        
+        if (existingData) {
+            const existingKeys = Object.keys(existingData);
+            existingKeys.forEach(key => {
+                // If the cloud data has a category we don't recognize, add it to the UI dynamically
+                if (!finalCategories.find(c => c.name === key)) {
+                    finalCategories.push({ name: key, color: "#888888", textColor: "#fff" });
+                }
+            });
+        }
 
         let subPlansHTML = '';
         categories.forEach(cat => {
@@ -94,6 +107,71 @@ document.addEventListener('DOMContentLoaded', async () => {
         `;
         
         planContainer.insertAdjacentHTML('beforeend', newPlanHTML);
+    };*/
+    window.buildPlanUI = function(planName, existingData = null) {
+        if (!existingData) {
+            window.projectSequenceData[planName] = {};
+        }
+
+        // Standard categories
+        const standardCategories = [
+            { name: "Column", color: "#92d050" },
+            { name: "Beam", color: "#2f5597", textColor: "#fff" },
+            { name: "Roof Brace", color: "#ffc000" },
+            { name: "Girt", color: "#ff00ff" },
+            { name: "Purlin", color: "#a6caf0", textColor: "#000" }
+        ];
+
+        // Upgrade: Merge standard categories with ANY custom ones found in the cloud data
+        let finalCategories = [...standardCategories];
+        
+        if (existingData) {
+            const existingKeys = Object.keys(existingData);
+            existingKeys.forEach(key => {
+                // If the cloud data has a category we don't recognize, add it to the UI dynamically
+                if (!finalCategories.find(c => c.name === key)) {
+                    finalCategories.push({ name: key, color: "#888888", textColor: "#fff" });
+                }
+            });
+        }
+
+        let subPlansHTML = '';
+        finalCategories.forEach(cat => {
+            const txtColor = cat.textColor || '#000';
+            
+            // Extract the items from the cloud data if they exist, otherwise make an empty array
+            const items = existingData && existingData[cat.name] ? existingData[cat.name] : [];
+            
+            // Ensure this category exists in our global memory tracker
+            if (!window.projectSequenceData[planName][cat.name]) {
+                window.projectSequenceData[planName][cat.name] = items;
+            }
+            
+            // Build the actual HTML rows
+            subPlansHTML += window.createSubPlanHTML(planName, cat.name, cat.color, txtColor, items);
+        });
+
+        const newPlanHTML = `
+            <div class="plan-details" data-plan="${planName}" style="margin-bottom: 10px; background: #fff; border-radius: 4px; border: 1px solid #ddd; overflow: visible;">
+                <div class="summary-wrapper" style="position: relative; padding: 10px 15px; background-color: #efefef; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; color: #333;">
+                    <div style="display: flex; align-items: center; gap: 12px; cursor: pointer; flex: 1;" onclick="togglePlanCollapse(this)">
+                        <span class="collapse-icon" style="font-family: monospace; font-size: 14px; color: #666;">v</span>
+                        <span class="summary-content" style="font-weight: 500;">☰ ${planName}</span>
+                    </div>
+                    <button class="kebab-btn" style="color: #666; font-size: 18px; opacity: 0.7; border: none; background: transparent; cursor: pointer;" onclick="toggleMenu(event, this)">⋮</button>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-item" onclick="handleMenuAction('Add Custom Category', this, '${planName}')">✨ Add Custom Category</div>
+                        <div class="dropdown-item" onclick="handleMenuAction('Edit', this, '${planName}')">✏️ Edit</div>
+                        <div class="dropdown-item danger" onclick="handleMenuAction('Delete Plan', this, '${planName}')">🗑️ Delete</div>
+                    </div>
+                </div>
+                <div class="sub-plan-list" style="padding: 10px; background-color: #ffffff; display: flex; flex-direction: column; gap: 8px;">
+                    ${subPlansHTML}
+                </div>
+            </div>
+        `;
+        
+        if (planContainer) planContainer.insertAdjacentHTML('beforeend', newPlanHTML);
     };
 
     // Initialize first plan
@@ -396,17 +474,32 @@ if (Object.keys(window.projectSequenceData).length === 0) {
         });
     }
 
-    // API Connection
+    // API Connection and Data Loading
     try {
-        window.tcAPI = await WorkspaceAPI.connect(window.parent, () => {}, 3000);
+        console.log("Attempting to connect to Trimble Workspace API...");
         
-        // Grab the active Project ID from Trimble Connect
+        // Increased timeout from 3000 to 10000 (10 seconds) to prevent premature offline mode
+        window.tcAPI = await WorkspaceAPI.connect(window.parent, () => {}, 10000);
+        
         const projectInfo = await window.tcAPI.project.getProject();
         window.trimbleProjectId = projectInfo.id;
+        console.log("Connected! Active Project ID:", window.trimbleProjectId);
         
+        // Actually load data from Firebase
+        const cloudData = await loadFromCloud(window.trimbleProjectId);
+        if (cloudData && Object.keys(cloudData).length > 0) {
+            window.projectSequenceData = cloudData;
+            for (const planName in cloudData) {
+                window.buildPlanUI(planName, cloudData[planName]);
+            }
+            window.showToast("Cloud sequence loaded successfully!", "success");
+        } else {
+            window.buildPlanUI("Phase 1");
+        }
     } catch (e) {
-        console.error("Running offline for UI testing.");
-        window.trimbleProjectId = "offline-test-project"; // Prevents crashes if testing locally
+        console.error("API Connection Failed! Running offline for UI testing. Error:", e);
+        window.trimbleProjectId = "offline-test-project";
+        window.buildPlanUI("Phase 1");
     }
 });
 
