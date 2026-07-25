@@ -2,7 +2,7 @@ import * as WorkspaceAPI from 'https://cdn.jsdelivr.net/npm/trimble-connect-work
 import { saveToCloud, loadFromCloud } from './firebase.js';
 // Global memory store
 window.projectSequenceData = {};
-window.trimbleProjectId = null; // Will be set when API connects
+window.trimbleProjectId = null;
 
 // Global sync function to easily trigger saves
 window.syncCloud = () => {
