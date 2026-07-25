@@ -1,5 +1,5 @@
 import * as WorkspaceAPI from 'https://cdn.jsdelivr.net/npm/trimble-connect-workspace-api@latest/+esm';
-import { saveToCloud, loadFromCloud } from './firebase-sync.js';
+import { saveToCloud, loadFromCloud } from './firebase.js';
 // Global memory store
 window.projectSequenceData = {};
 window.trimbleProjectId = null; // Will be set when API connects
